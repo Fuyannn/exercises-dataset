@@ -42,13 +42,17 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 教学文字：陈旧也能用，优先给缓存再后台更新
-  if (p.includes('/data/text.')) {
+  // 数据文件（索引 + 各语言教学文字）：在线时始终取新的，断网回落到缓存
+  if (p.includes('/data/')) {
     e.respondWith(
       caches.open(SHELL).then(async (c) => {
-        const hit = await c.match(req);
-        const net = fetch(req).then((res) => { if (res.ok) c.put(req, res.clone()); return res; }).catch(() => null);
-        return hit || (await net) || Response.error();
+        try {
+          const res = await fetch(req);
+          if (res.ok) c.put(req, res.clone());
+          return res;
+        } catch (err) {
+          return (await c.match(req)) || Response.error();
+        }
       })
     );
     return;

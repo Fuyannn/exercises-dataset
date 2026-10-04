@@ -105,6 +105,7 @@ main{padding:4px 14px calc(var(--safe-b) + 40px)}
   font-size:13.5px;font-weight:600;line-height:1.32;letter-spacing:-.01em;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px;
 }
+.card .en{font-size:11px;color:var(--text3);line-height:1.4;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
 .tag{font-size:10.5px;padding:2.5px 7px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--text2);white-space:nowrap}
 .tag.a{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:700}
@@ -149,6 +150,7 @@ main{padding:4px 14px calc(var(--safe-b) + 40px)}
 .hero img{width:100%;aspect-ratio:1/1;object-fit:contain}
 .hero .ph{width:100%;aspect-ratio:1/1;display:grid;place-items:center;color:#9a9aa3;font-size:13px;background:#fff}
 h1{font-size:20px;line-height:1.3;letter-spacing:-.02em;margin-top:15px}
+.enl{font-size:13.5px;color:var(--text3);margin-top:4px;line-height:1.4}
 .sub{display:flex;align-items:center;gap:7px;margin-top:6px;flex-wrap:wrap}
 .sub .id{font-size:11.5px;color:var(--text3);font-variant-numeric:tabular-nums}
 .facts{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:15px}
@@ -305,6 +307,7 @@ const PAGE = 60;
 let IDX = null;            // 完整索引
 let ITEMS = [];            // records
 let D = {};                // 各维度中文标签字典
+let NAME = {};             // 动作中文名（id → 中文）
 let HAY = [];              // 预计算的搜索串
 let ZHAY = null;           // 中文要领搜索串（异步到货）
 let TEXT = {};             // lang -> {id:[steps]}
@@ -316,6 +319,7 @@ let view = [], shown = 0, cur = -1, savedY = 0;
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const L = (kind, en) => (D[kind] && D[kind][en]) || en;
+const nm = (r) => NAME[r[0]] || r[1];     // 中文名优先，缺失回退英文
 const img = (r) => `images/${r[0]}-${r[6]}.jpg`;
 const gif = (r) => `videos/${r[0]}-${r[6]}.gif`;
 
@@ -330,8 +334,9 @@ async function boot() {
   }
   ITEMS = IDX.items;
   D = IDX.dicts;
+  NAME = IDX.names || {};
   HAY = ITEMS.map((r) =>
-    [r[1], r[2], r[3], r[4], r[5], (r[7] || []).join(' '), L('category', r[2]), L('equipment', r[3]),
+    [nm(r), r[1], r[2], r[3], r[4], r[5], (r[7] || []).join(' '), L('category', r[2]), L('equipment', r[3]),
      L('target', r[4]), L('muscle_group', r[5])].join(' ').toLowerCase());
   buildChips();
   apply();
@@ -451,8 +456,9 @@ function card(r, i) {
   el.innerHTML =
     `<button class="fav${favs.has(r[0]) ? ' on' : ''}" data-fav="${r[0]}" aria-label="收藏">` +
       `<svg viewBox="0 0 24 24"><path d="M12 3.6l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9z"/></svg></button>` +
-    `<img class="thumb" loading="lazy" decoding="async" alt="${esc(r[1])}" src="${img(r)}">` +
-    `<div class="body"><div class="nm">${esc(r[1])}</div>` +
+    `<img class="thumb" loading="lazy" decoding="async" alt="${esc(nm(r))}" src="${img(r)}">` +
+    `<div class="body"><div class="nm">${esc(nm(r))}</div>` +
+    `<div class="en">${esc(r[1])}</div>` +
     `<div class="tags"><span class="tag a">${esc(L('category', r[2]))}</span>` +
     `<span class="tag">${esc(L('equipment', r[3]))}</span></div></div>`;
   el.onclick = (e) => {
@@ -520,8 +526,9 @@ function renderDetail(keepScroll) {
   const steps = t ? t[r[0]] : null;
   const sec = (r[7] || []).map((m) => `<span class="pill">${esc(L('muscle_group', m) || m)}</span>`).join('');
   $('#dBody').innerHTML =
-    `<div class="hero"><img id="dGif" alt="${esc(r[1])}" src="${gif(r)}"></div>` +
-    `<h1>${esc(r[1])}</h1>` +
+    `<div class="hero"><img id="dGif" alt="${esc(nm(r))}" src="${gif(r)}"></div>` +
+    `<h1>${esc(nm(r))}</h1>` +
+    `<div class="enl">${esc(r[1])}</div>` +
     `<div class="sub"><span class="id">#${esc(r[0])}</span><span class="id">·</span>` +
       `<span class="id">${esc(L('category', r[2]))} / ${esc(L('target', r[4]))}</span></div>` +
     `<div class="facts">` +
