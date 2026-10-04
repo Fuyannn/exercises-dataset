@@ -231,7 +231,7 @@ h1{font-size:20px;line-height:1.3;letter-spacing:-.02em;margin-top:15px}
   </div>
   <div class="search" id="searchWrap">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-    <input id="q" type="search" placeholder="搜名字、器械或中文要领…" autocomplete="off" enterkeyhint="search">
+    <input id="q" type="search" placeholder="搜中文或英文：卧推 / 深蹲 / dumbbell…" autocomplete="off" enterkeyhint="search">
     <button class="clear" id="btnClear" aria-label="清空">✕</button>
   </div>
   <div class="chips" id="chips"></div>
@@ -267,6 +267,39 @@ const $ = (s) => document.querySelector(s);
 const LANGS = [['zh','中文'],['en','English'],['es','Español'],['it','Italiano'],['tr','Türkçe'],
                ['ru','Русский'],['hi','हिन्दी'],['pl','Polski'],['ko','한국어'],['fr','Français']];
 const LANGNAME = Object.fromEntries(LANGS);
+/* 中文术语 → 英文关键词。动作名只有英文，而中文要领是纯描述性的（通篇不写「卧推」二字），
+   所以「卧推」「硬拉」这类最常见的中文搜索原本一条都搜不到，靠这张表桥接。
+   命中多个词时只保留最长的那个（「侧平举」不会被「侧」「平举」拆散），多个词按「都要满足」处理。 */
+const ZH = {
+  // 器械
+  '哑铃':'dumbbell','杠铃':'barbell','奥杆':'olympic barbell','曲杆':'ez barbell','史密斯':'smith',
+  '绳索':'cable','弹力带':'band','阻力带':'resistance band','壶铃':'kettlebell','药球':'medicine ball',
+  '瑞士球':'stability ball','波速球':'bosu','腹肌轮':'wheel roller','雪橇':'sled','轮胎':'tire','爬绳':'rope',
+  '锤式':'hammer','椭圆机':'elliptical','动感单车':'stationary bike','踏步机':'stepmill','滑雪机':'skierg',
+  '徒手':'body weight','自重':'body weight','器械':'lever','辅助':'assisted','负重':'weighted',
+  // 动作
+  '卧推':'bench press','硬拉':'deadlift','深蹲':'squat','前蹲':'front squat','弓步':'lunge','剪蹲':'lunge',
+  '腿举':'leg press','提踵':'calf raise','弯举':'curl','臂屈伸':'extension','双杠臂屈伸':'dip','双杠':'dip',
+  '推举':'press','上推':'press','平举':'raise','侧平举':'lateral raise','前平举':'front raise',
+  '飞鸟':'fly','夹胸':'fly','划船':'row','下拉':'pulldown','引体向上':'pull-up','引体':'pull-up',
+  '悬垂':'hanging','卷腹':'crunch','仰卧起坐':'sit-up','平板支撑':'plank','臀桥':'glute bridge',
+  '臀推':'hip thrust','臀冲':'hip thrust','耸肩':'shrug','拉伸':'stretch','伸展':'stretch',
+  '俯卧撑':'push-up','举腿':'leg raise','抬腿':'leg raise','侧弯':'side bend','转体':'twist',
+  '腕弯举':'wrist curl','面拉':'face pull','后踢':'kickback','挺身':'back extension','背屈伸':'back extension',
+  '外展':'abduction','内收':'adduction','跳绳':'jump rope','跳':'jump','跑':'run','走':'walk','骑':'bike',
+  '罗马尼亚':'romanian','保加利亚':'bulgarian','泽奇':'zercher','早安式':'good morning','农夫':'farmer',
+  // 部位 / 肌肉
+  '胸':'chest','背':'back','上背':'upper back','下背':'lower back','腰腹':'waist','腰':'waist',
+  '腹肌':'abs','腹斜肌':'obliques','腹':'abs','核心':'core','臀肌':'glutes','臀':'glutes',
+  '大腿':'legs','小腿':'calves','腿':'legs','股四头':'quads','腘绳':'hamstrings','二头':'biceps',
+  '三头':'triceps','前臂':'forearms','肩袖':'rotator cuff','三角肌':'delts','肩':'shoulders',
+  '斜方':'traps','髋屈肌':'hip flexors','髋':'hip','手腕':'wrists','踝':'ankles','心血管':'cardiovascular',
+  // 姿态 / 方位
+  '坐姿':'seated','站姿':'standing','仰卧':'lying','俯卧':'prone','上斜':'incline','下斜':'decline',
+  '单臂':'one arm','单手':'one arm','单腿':'one leg','双臂':'two arm','双腿':'two leg','交替':'alternate',
+  '反向':'reverse','高位':'high','低位':'low','窄距':'close grip','宽距':'wide grip','直腿':'straight leg',
+  '跪姿':'kneeling','俯身':'bent over','斜托':'preacher','悬挂':'hanging',
+};
 const PAGE = 60;
 
 let IDX = null;            // 完整索引
@@ -376,7 +409,8 @@ function apply() {
     if (!terms.length) return true;
     let hay = HAY[i];
     if (ZHAY && ZHAY[r[0]]) hay += ' ' + ZHAY[r[0]];
-    return terms.every((t) => hay.includes(t));
+    return terms.every((g) => hay.includes(g.lit) ||
+      (g.alts.length > 0 && g.alts.every((a) => hay.includes(a))));
   });
   shown = 0;
   $('#grid').innerHTML = '';
@@ -387,7 +421,12 @@ function apply() {
     (favOnly ? `<span class="dot"></span>只看收藏` : '');
   render();
 }
-const qted = () => q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+/* 查询串拆成若干「必须同时满足」的条件组：英文原文命中即可，中文走术语表 */
+const qted = () => q.trim().toLowerCase().split(/\s+/).filter(Boolean).map((t) => {
+  const keys = Object.keys(ZH).filter((k) => t.includes(k));
+  const max = keys.filter((k) => !keys.some((o) => o !== k && o.includes(k)));
+  return { lit: t, alts: max.map((k) => ZH[k]) };
+});
 
 function render() {
   const grid = $('#grid');
