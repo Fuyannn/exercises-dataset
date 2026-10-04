@@ -1,0 +1,17 @@
+{
+  "name": "动作库 · 1324 个健身动作",
+  "short_name": "动作库",
+  "description": "1324 个健身动作：演示动画、所需器械、目标肌群与分步中文教学。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f6f7",
+  "theme_color": "#ff4f00",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
